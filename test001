@@ -1,0 +1,37 @@
+public GameObject prefab;
+public initailSize = 20;
+
+private Queue<GameObject> _pool = new Queue<GameObject>();
+
+void Awake()  //預先創建指定數量的物件塞進物件池中
+{
+	for(int cnt = 0; cnt < initailSize; cnt++)
+	{
+		GameObject Obj = Instantiate(prefab);
+		_pool.Enqueue(Obj);
+		Obj.SetActive(false);
+	}
+}
+
+public void ReUse(Vector3 position, Quaternion rotation)
+{
+	if(_pool.Count > 0)
+	{
+		GameObject reuse = _pool.Dequeue();
+		reuse.transform.position = position;
+		reuse.transform.rotation = rotation;
+		reuse.SetActive(true);
+	}
+	else
+	{
+		GameObject Obj = Instantiate(prefab);
+		Obj.transform.position = position;
+		Obj.transform.rotation = rotation;
+	}
+}
+
+public void Recovery(GameObject recovery)
+{
+	_pool.Enqueue(recovery);
+	recovery.SetActive(false);
+}
