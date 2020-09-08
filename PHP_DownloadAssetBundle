@@ -1,0 +1,102 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Networking;
+
+public class PHP_DownloadAssetBundle : MonoBehaviour {
+
+    //讀取伺服器上的模型(AB)用
+    string AssetBundlePath;
+    string prefabName;
+    string tempSavePath;
+    string filebName;
+
+    string url = "https://www.lws3d.com/forever3dplus/newApp/databasePHP/downloadFileFromOssToEcs.php";  //獲得模型下載路徑的PHP
+    string Delete_url = "https://www.lws3d.com/forever3dplus/newApp/databasePHP/deleteEcsTempFile.php";  //讀取完清除資料用的PHP
+
+
+	public void TEST()  //測試用
+	{
+		WWWForm form = new WWWForm();
+		form.AddField("account", "(+886)60101010");  //帳號(手機)
+		form.AddField("password", "5s1e6z6zz");        //密碼
+		form.AddField("modelId", "111");              //模型編號
+		WWW www = new WWW(url,form);
+
+		StartCoroutine(NewWaitForRequest(www));      
+	}
+
+    IEnumerator NewWaitForRequest(WWW www)
+    {
+        yield return www;
+
+        string msg;
+
+        if (www.error == null)
+        {
+            //Debug.Log(www.text);
+
+            //解析第一層JSON格式的字串
+            JSONObject output = new JSONObject(www.text);
+            msg = output.GetField("msg").ToString();
+
+            //解析第二層JSON格式的字串
+            JSONObject msg_json = new JSONObject(msg);
+            tempSavePath = msg_json.GetField("tempSavePath").ToString().Replace(@"\/", @"/").Replace(@"""", @"");
+            prefabName = msg_json.GetField("prefabName").ToString().Replace(@"\/", @"/").Replace(@"""", @"");
+            filebName = msg_json.GetField("fileName").ToString().Replace(@"\/", @"/").Replace(@"""", @"");
+
+            //將解析出來的字串接成下載AssetBundle的網址
+            AssetBundlePath = "https://www.lws3d.com/forever3dplus/newApp/databasePHP/" + tempSavePath + filebName;  //儲存完整的下載網址
+
+            //開始下載
+            //var req1 = UnityWebRequest.GetAssetBundle(AssetBundlePath);
+            var req = UnityWebRequestAssetBundle.GetAssetBundle(AssetBundlePath);
+
+            req.SendWebRequest();
+
+			while (!req.isDone)
+			{
+				Debug.Log (req.downloadProgress);
+				yield return 1;
+			}
+	
+
+            var get_asb = DownloadHandlerAssetBundle.GetContent(req);
+
+            var perfab = get_asb.LoadAsset<GameObject>(prefabName);
+            
+            //perfab.gameObject.AddComponent<腳本名>();  動態掛載腳本的方法
+
+            //生成(設本物件為父物件)
+            GameObject modelObject;
+            modelObject = Instantiate(perfab);
+            modelObject.transform.SetParent(gameObject.transform);
+            modelObject.transform.localPosition = Vector3.zero;
+
+            //清除用不到的資源
+            get_asb.Unload(false);
+            req.Dispose();
+            Invoke("DeleteTempFile", 0.1f);
+        }
+        else
+        {
+            Debug.Log("WWW Error: " + www.error);
+        }
+
+    }
+
+    void DeleteTempFile()  //呼叫清除資料用的PHP
+    {
+
+        WWWForm form = new WWWForm();
+        form.AddField("tempSavePath", tempSavePath);
+        WWW www = new WWW(Delete_url, form);
+        StartCoroutine(DeleteTempFileData(www));
+    }
+    IEnumerator DeleteTempFileData(WWW www)
+    {
+        return www;
+    }
+
+}
