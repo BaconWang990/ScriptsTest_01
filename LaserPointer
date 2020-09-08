@@ -1,0 +1,91 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LaserPointer : MonoBehaviour {
+
+    public Transform cameraRigTransform;  //[CameraRig]的位置
+    public Transform headTransform;  //存取頭盔的參數
+    public Vector3 teleportReticleOffset;
+    public LayerMask teleportMask;  //用圖層來過濾允許傳送的區域
+
+    private SteamVR_TrackedObject trackedObj;
+
+    public GameObject laserPrefab;      //雷射預製物
+    private GameObject laser;           //存取雷射參數
+    private Transform laserTransform;   //存取雷射位置(transform)
+
+    public GameObject teleportReticlePrefab;
+    private GameObject reticle;   //傳送路標
+    private Transform teleportReticleTransform;
+    private Vector3 hitPoint;           //雷射擊中的位置
+    private bool shouldTeleport;    //找到有效的傳送位置時設置為true
+
+    public static bool PromptClose;
+
+    private SteamVR_Controller.Device Controller
+    {
+        get { return SteamVR_Controller.Input((int)trackedObj.index); }
+    }
+
+
+    void Awake()
+    {
+        trackedObj = GetComponent<SteamVR_TrackedObject>();
+        PromptClose = false;
+    }
+
+    void Start()
+    {
+        laser = Instantiate(laserPrefab);              //生成雷射預製物
+        laserTransform = laser.transform;              //存取雷射位置
+        reticle = Instantiate(teleportReticlePrefab);  //生成路標預製物
+        teleportReticleTransform = reticle.transform;  //存取路標位置
+    } 
+
+    private void ShowLaser(RaycastHit hit)
+    {
+        laser.SetActive(true);            //顯示雷射
+        laserTransform.position = Vector3.Lerp(trackedObj.transform.position, hitPoint, .5f);  //讓雷射顯示在控制器及射線擊中點之間
+        laserTransform.LookAt(hitPoint);  //使雷射瞄準射線擊中的位置
+        laserTransform.localScale = new Vector3(laserTransform.localScale.x, laserTransform.localScale.y, hit.distance);  //讓雷射的長度能完全呈現射線長度
+    }
+
+    private void Teleport()  //忍法。瞬身之術!!
+    {
+        shouldTeleport = false;    //將偵測有效傳送位置改回false
+        reticle.SetActive(false);  //隱藏光罩
+        Vector3 difference = cameraRigTransform.position - headTransform.position;  //計算camera中心和玩家頭盔之間的差距
+        difference.y = 0;   //將上述y軸設為0,因為計算時不考慮y軸
+        cameraRigTransform.position = hitPoint + difference;  //將camera移動到目標位置並添加差值(添加差值避免傳送到錯誤位置)
+    }
+
+    void Update () {
+        if (Controller.GetPress(SteamVR_Controller.ButtonMask.Touchpad))   //偵測蘑菇頭是否被按下
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(trackedObj.transform.position, transform.forward, out hit, 100, teleportMask))   //儲存射線擊中的點
+            {
+                hitPoint = hit.point;
+                ShowLaser(hit);
+
+                reticle.SetActive(true);  //顯示傳送路標
+                teleportReticleTransform.position = hitPoint + teleportReticleOffset;  //將傳送光罩移至射線擊中的地點並修飾
+                shouldTeleport = true;    //偵測是否為有效位置
+            }
+        }
+        else
+        {
+            laser.SetActive(false);    //隱藏雷射
+            reticle.SetActive(false);  //隱藏路標
+        }
+        if (Controller.GetPressUp(SteamVR_Controller.ButtonMask.Touchpad) && shouldTeleport)  //放開蘑菇頭時
+        {
+            Teleport();
+            if(!PromptClose)
+            {
+                PromptClose = true;
+            }
+        }
+    }
+}
