@@ -1,0 +1,82 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System.IO;
+using System.Runtime.InteropServices;
+using NatShareU;
+
+public class CaptureScreenshot : MonoBehaviour {
+
+	public GameObject Btn;
+	public GameObject ChangeBtn;
+  public GameObject SavePromptUI;
+
+
+	[DllImport("__Internal")]
+	private static extern void _SavePhoto (string readAddr);
+
+	string path_save;
+	string path_read;
+
+
+public void StartScreenshot () {
+		
+		Btn.SetActive (false);
+		ChangeBtn.SetActive (false);
+    SavePromptUI.SetActive(false);
+    CancelInvoke("CloseSavePromptUI");
+    StartCoroutine (Capturescreenshot("screenshot"));
+	}
+    
+	IEnumerator Capturescreenshot(string filename)
+	{
+		yield return new WaitForEndOfFrame ();
+
+		Texture2D screenImage = new Texture2D (Screen.width, Screen.height);
+		//從螢幕擷取圖像
+		screenImage.ReadPixels(new Rect(0,0,Screen.width, Screen.height), 0, 0);
+		screenImage.Apply ();
+
+		string filePath = Path.Combine (Application.persistentDataPath, "images");
+		byte[] imageBytes = null;
+
+		//轉換成jpg
+		filePath = Path.Combine(filePath, filename + ".jpeg");
+		createDir(filePath);
+		imageBytes = screenImage.EncodeToJPG();
+
+		//儲存圖像到設備
+		System.IO.File.WriteAllBytes(filePath, imageBytes);
+		Debug.Log ("儲存到" + filePath.Replace ("/", "\\"));
+
+        _SavePhoto (filePath);
+
+		//NatShare.ShareImage (screenImage);
+
+		Invoke ("showObject", 1f);  //1f後恢復UI顯示
+	}
+
+	void createDir(string dir)  //創建目錄
+	{
+		if(!Directory.Exists(Path.GetDirectoryName(dir)))
+			{
+				Directory.CreateDirectory(Path.GetDirectoryName(dir));
+			}
+	}
+
+
+	void showObject()
+	{
+		Btn.SetActive (true);
+		ChangeBtn.SetActive (true);
+        SavePromptUI.SetActive(true);
+
+        Invoke("CloseSavePromptUI", 3f);
+    }
+
+    void CloseSavePromptUI()
+    {
+        SavePromptUI.SetActive(false);       
+    }
+    
+}
