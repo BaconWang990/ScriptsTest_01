@@ -11,8 +11,8 @@ public class PHP_DownloadAssetBundle : MonoBehaviour {
     string tempSavePath;
     string filebName;
 
-    string url = "https://www.lws3d.com/forever3dplus/newApp/databasePHP/downloadFileFromOssToEcs.php";  //獲得模型下載路徑的PHP
-    string Delete_url = "https://www.lws3d.com/forever3dplus/newApp/databasePHP/deleteEcsTempFile.php";  //讀取完清除資料用的PHP
+    string url = "https://www.xxxxxx.com/xxxxx/newApp/databasePHP/downloadFileFromOssToEcs.php";  //獲得模型下載路徑的PHP
+    string Delete_url = "https://www.xxxxxx.com/xxxxx/newApp/databasePHP/deleteEcsTempFile.php";  //讀取完清除資料用的PHP
 
 
 	public void TEST()  //測試用
